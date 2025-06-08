@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcphost/pkg/history"
 	"github.com/mark3labs/mcphost/pkg/llm"
@@ -211,7 +212,7 @@ func createMCPClients(
 		if server.Config.GetType() == transportSSE {
 			sseConfig := server.Config.(SSEServerConfig)
 
-			options := []mcpclient.ClientOption{}
+			var options []transport.ClientOption
 
 			if sseConfig.Headers != nil {
 				// Parse headers from the config
@@ -224,15 +225,18 @@ func createMCPClients(
 						headers[key] = value
 					}
 				}
-				options = append(options, mcpclient.WithHeaders(headers))
+				options = append(options, transport.WithHeaders(headers))
 			}
 
-			client, err = mcpclient.NewSSEMCPClient(
+			sseClient, err := mcpclient.NewSSEMCPClient(
 				sseConfig.Url,
 				options...,
 			)
 			if err == nil {
-				err = client.(*mcpclient.SSEMCPClient).Start(context.Background())
+				err = sseClient.Start(context.Background())
+				if err == nil {
+					client = sseClient
+				}
 			}
 		} else {
 			stdioConfig := server.Config.(STDIOServerConfig)
