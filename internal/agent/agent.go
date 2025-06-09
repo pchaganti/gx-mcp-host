@@ -52,6 +52,9 @@ type AgentConfig struct {
 // ToolCallHandler is a function type for handling tool calls as they happen
 type ToolCallHandler func(toolName, toolArgs string)
 
+// ToolExecutionHandler is a function type for handling tool execution start/end
+type ToolExecutionHandler func(toolName string, isStarting bool)
+
 // ToolResultHandler is a function type for handling tool results
 type ToolResultHandler func(toolName, toolArgs, result string, isError bool)
 
@@ -348,7 +351,7 @@ func (a *Agent) Stream(ctx context.Context, input []*schema.Message, opts ...com
 
 // GenerateWithLoop processes messages with a custom loop that displays tool calls in real-time
 func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message, 
-	onToolCall ToolCallHandler, onToolResult ToolResultHandler, onResponse ResponseHandler, onToolCallContent ToolCallContentHandler) (*schema.Message, error) {
+	onToolCall ToolCallHandler, onToolExecution ToolExecutionHandler, onToolResult ToolResultHandler, onResponse ResponseHandler, onToolCallContent ToolCallContentHandler) (*schema.Message, error) {
 	
 	// Create a copy of messages to avoid modifying the original
 	workingMessages := make([]*schema.Message, len(messages))
@@ -408,7 +411,18 @@ func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message
 
 				// Execute the tool
 				if selectedTool, exists := toolMap[toolCall.Function.Name]; exists {
+					// Notify tool execution start
+					if onToolExecution != nil {
+						onToolExecution(toolCall.Function.Name, true)
+					}
+					
 					output, err := selectedTool.(tool.InvokableTool).InvokableRun(ctx, toolCall.Function.Arguments)
+					
+					// Notify tool execution end
+					if onToolExecution != nil {
+						onToolExecution(toolCall.Function.Name, false)
+					}
+					
 					if err != nil {
 						errorMsg := fmt.Sprintf("Tool execution error: %v", err)
 						toolMessage := schema.ToolMessage(errorMsg, toolCall.ID)

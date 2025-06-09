@@ -253,6 +253,22 @@ func runNonInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.C
 				cli.DisplayToolCallMessage(toolName, toolArgs)
 			}
 		},
+		// Tool execution handler - called when tool execution starts/ends
+		func(toolName string, isStarting bool) {
+			if !quiet && cli != nil {
+				if isStarting {
+					// Start spinner for tool execution
+					currentSpinner = ui.NewSpinner(fmt.Sprintf("Executing %s...", toolName))
+					currentSpinner.Start()
+				} else {
+					// Stop spinner when tool execution completes
+					if currentSpinner != nil {
+						currentSpinner.Stop()
+						currentSpinner = nil
+					}
+				}
+			}
+		},
 		// Tool result handler - called when a tool execution completes
 		func(toolName, toolArgs, result string, isError bool) {
 			if !quiet && cli != nil {
@@ -371,6 +387,20 @@ func runInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.CLI,
 					currentSpinner = nil
 				}
 				cli.DisplayToolCallMessage(toolName, toolArgs)
+			},
+			// Tool execution handler - called when tool execution starts/ends
+			func(toolName string, isStarting bool) {
+				if isStarting {
+					// Start spinner for tool execution
+					currentSpinner = ui.NewSpinner(fmt.Sprintf("Executing %s...", toolName))
+					currentSpinner.Start()
+				} else {
+					// Stop spinner when tool execution completes
+					if currentSpinner != nil {
+						currentSpinner.Stop()
+						currentSpinner = nil
+					}
+				}
 			},
 			// Tool result handler - called when a tool execution completes
 			func(toolName, toolArgs, result string, isError bool) {
