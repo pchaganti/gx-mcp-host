@@ -20,7 +20,18 @@ type MCPServerConfig struct {
 
 // Config represents the application configuration
 type Config struct {
-	MCPServers map[string]MCPServerConfig `json:"mcpServers"`
+	MCPServers       map[string]MCPServerConfig `json:"mcpServers" yaml:"mcpServers"`
+	Model            string                     `json:"model,omitempty" yaml:"model,omitempty"`
+	MaxSteps         int                        `json:"max-steps,omitempty" yaml:"max-steps,omitempty"`
+	MessageWindow    int                        `json:"message-window,omitempty" yaml:"message-window,omitempty"`
+	Debug            bool                       `json:"debug,omitempty" yaml:"debug,omitempty"`
+	SystemPrompt     string                     `json:"system-prompt,omitempty" yaml:"system-prompt,omitempty"`
+	OpenAIAPIKey     string                     `json:"openai-api-key,omitempty" yaml:"openai-api-key,omitempty"`
+	AnthropicAPIKey  string                     `json:"anthropic-api-key,omitempty" yaml:"anthropic-api-key,omitempty"`
+	GoogleAPIKey     string                     `json:"google-api-key,omitempty" yaml:"google-api-key,omitempty"`
+	OpenAIURL        string                     `json:"openai-url,omitempty" yaml:"openai-url,omitempty"`
+	AnthropicURL     string                     `json:"anthropic-url,omitempty" yaml:"anthropic-url,omitempty"`
+	Prompt           string                     `json:"prompt,omitempty" yaml:"prompt,omitempty"`
 }
 
 // Validate validates the configuration

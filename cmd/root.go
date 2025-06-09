@@ -531,11 +531,7 @@ func runInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.CLI,
 	}
 }
 
-// ScriptConfig represents the YAML frontmatter in a script file
-type ScriptConfig struct {
-	MCPServers map[string]config.MCPServerConfig `yaml:"mcpServers"`
-	Prompt     string                            `yaml:"prompt"`
-}
+
 
 // runScriptMode handles script mode execution
 func runScriptMode(ctx context.Context) error {
@@ -566,7 +562,7 @@ func runScriptMode(ctx context.Context) error {
 	}
 	
 	// Parse the script file
-	scriptConfig, prompt, err := parseScriptFile(scriptFile)
+	scriptConfig, err := parseScriptFile(scriptFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse script file: %v", err)
 	}
@@ -574,32 +570,116 @@ func runScriptMode(ctx context.Context) error {
 	// Override the global configFile and promptFlag with script values
 	originalConfigFile := configFile
 	originalPromptFlag := promptFlag
+	originalModelFlag := modelFlag
+	originalMaxSteps := maxSteps
+	originalMessageWindow := messageWindow
+	originalDebugMode := debugMode
+	originalSystemPromptFile := systemPromptFile
+	originalOpenAIAPIKey := openaiAPIKey
+	originalAnthropicAPIKey := anthropicAPIKey
+	originalGoogleAPIKey := googleAPIKey
+	originalOpenAIURL := openaiBaseURL
+	originalAnthropicURL := anthropicBaseURL
 	
 	// Create config from script or load normal config
 	var mcpConfig *config.Config
 	if len(scriptConfig.MCPServers) > 0 {
 		// Use servers from script
-		mcpConfig = &config.Config{
-			MCPServers: scriptConfig.MCPServers,
-		}
+		mcpConfig = scriptConfig
 	} else {
 		// Fall back to normal config loading
 		mcpConfig, err = config.LoadMCPConfig(configFile)
 		if err != nil {
 			return fmt.Errorf("failed to load MCP config: %v", err)
 		}
+		// Merge script config values into loaded config
+		if scriptConfig.Model != "" {
+			mcpConfig.Model = scriptConfig.Model
+		}
+		if scriptConfig.MaxSteps != 0 {
+			mcpConfig.MaxSteps = scriptConfig.MaxSteps
+		}
+		if scriptConfig.MessageWindow != 0 {
+			mcpConfig.MessageWindow = scriptConfig.MessageWindow
+		}
+		if scriptConfig.Debug {
+			mcpConfig.Debug = scriptConfig.Debug
+		}
+		if scriptConfig.SystemPrompt != "" {
+			mcpConfig.SystemPrompt = scriptConfig.SystemPrompt
+		}
+		if scriptConfig.OpenAIAPIKey != "" {
+			mcpConfig.OpenAIAPIKey = scriptConfig.OpenAIAPIKey
+		}
+		if scriptConfig.AnthropicAPIKey != "" {
+			mcpConfig.AnthropicAPIKey = scriptConfig.AnthropicAPIKey
+		}
+		if scriptConfig.GoogleAPIKey != "" {
+			mcpConfig.GoogleAPIKey = scriptConfig.GoogleAPIKey
+		}
+		if scriptConfig.OpenAIURL != "" {
+			mcpConfig.OpenAIURL = scriptConfig.OpenAIURL
+		}
+		if scriptConfig.AnthropicURL != "" {
+			mcpConfig.AnthropicURL = scriptConfig.AnthropicURL
+		}
+		if scriptConfig.Prompt != "" {
+			mcpConfig.Prompt = scriptConfig.Prompt
+		}
 	}
 	
 	// Override the global config for normal mode
 	scriptMCPConfig = mcpConfig
 	
-	// Set the prompt from script
-	promptFlag = prompt
+	// Apply script configuration to global flags
+	if mcpConfig.Prompt != "" {
+		promptFlag = mcpConfig.Prompt
+	}
+	if mcpConfig.Model != "" {
+		modelFlag = mcpConfig.Model
+	}
+	if mcpConfig.MaxSteps != 0 {
+		maxSteps = mcpConfig.MaxSteps
+	}
+	if mcpConfig.MessageWindow != 0 {
+		messageWindow = mcpConfig.MessageWindow
+	}
+	if mcpConfig.Debug {
+		debugMode = mcpConfig.Debug
+	}
+	if mcpConfig.SystemPrompt != "" {
+		systemPromptFile = mcpConfig.SystemPrompt
+	}
+	if mcpConfig.OpenAIAPIKey != "" {
+		openaiAPIKey = mcpConfig.OpenAIAPIKey
+	}
+	if mcpConfig.AnthropicAPIKey != "" {
+		anthropicAPIKey = mcpConfig.AnthropicAPIKey
+	}
+	if mcpConfig.GoogleAPIKey != "" {
+		googleAPIKey = mcpConfig.GoogleAPIKey
+	}
+	if mcpConfig.OpenAIURL != "" {
+		openaiBaseURL = mcpConfig.OpenAIURL
+	}
+	if mcpConfig.AnthropicURL != "" {
+		anthropicBaseURL = mcpConfig.AnthropicURL
+	}
 	
 	// Restore original values after execution
 	defer func() {
 		configFile = originalConfigFile
 		promptFlag = originalPromptFlag
+		modelFlag = originalModelFlag
+		maxSteps = originalMaxSteps
+		messageWindow = originalMessageWindow
+		debugMode = originalDebugMode
+		systemPromptFile = originalSystemPromptFile
+		openaiAPIKey = originalOpenAIAPIKey
+		anthropicAPIKey = originalAnthropicAPIKey
+		googleAPIKey = originalGoogleAPIKey
+		openaiBaseURL = originalOpenAIURL
+		anthropicBaseURL = originalAnthropicURL
 		scriptMCPConfig = nil
 	}()
 	
@@ -607,11 +687,11 @@ func runScriptMode(ctx context.Context) error {
 	return runNormalMode(ctx)
 }
 
-// parseScriptFile parses a script file with YAML frontmatter and prompt
-func parseScriptFile(filename string) (*ScriptConfig, string, error) {
+// parseScriptFile parses a script file with YAML frontmatter and returns config
+func parseScriptFile(filename string) (*config.Config, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	defer file.Close()
 	
@@ -640,60 +720,23 @@ func readRemainingLines(scanner *bufio.Scanner) string {
 	return strings.Join(lines, "\n")
 }
 
-// parseScriptContent parses the content to extract YAML frontmatter and prompt
-func parseScriptContent(content string) (*ScriptConfig, string, error) {
+// parseScriptContent parses the content to extract YAML frontmatter
+func parseScriptContent(content string) (*config.Config, error) {
 	lines := strings.Split(content, "\n")
 	
-	// Find YAML frontmatter and prompt
+	// Find YAML frontmatter
 	var yamlLines []string
-	var promptLines []string
-	var inPrompt bool
 	
 	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "prompt:") {
-			inPrompt = true
-			// Extract the prompt value if it's on the same line
-			if len(trimmed) > 7 {
-				promptValue := strings.TrimSpace(trimmed[7:])
-				if promptValue != "" {
-					promptLines = append(promptLines, promptValue)
-				}
-			}
-			continue
-		}
-		
-		if inPrompt {
-			// Continue collecting prompt lines (handle multi-line YAML strings)
-			if strings.HasPrefix(line, "  ") || strings.HasPrefix(line, "\t") {
-				promptLines = append(promptLines, strings.TrimPrefix(strings.TrimPrefix(line, "  "), "\t"))
-			} else if trimmed != "" && !strings.Contains(trimmed, ":") {
-				promptLines = append(promptLines, line)
-			} else if trimmed != "" {
-				// New YAML key, stop collecting prompt
-				inPrompt = false
-				yamlLines = append(yamlLines, line)
-			}
-		} else {
-			yamlLines = append(yamlLines, line)
-		}
+		yamlLines = append(yamlLines, line)
 	}
 	
 	// Parse YAML
 	yamlContent := strings.Join(yamlLines, "\n")
-	var scriptConfig ScriptConfig
+	var scriptConfig config.Config
 	if err := yaml.Unmarshal([]byte(yamlContent), &scriptConfig); err != nil {
-		return nil, "", fmt.Errorf("failed to parse YAML: %v", err)
+		return nil, fmt.Errorf("failed to parse YAML: %v", err)
 	}
 	
-	// Join prompt lines
-	prompt := strings.Join(promptLines, "\n")
-	prompt = strings.TrimSpace(prompt)
-	
-	// If prompt wasn't found in YAML, use the scriptConfig.Prompt
-	if prompt == "" {
-		prompt = scriptConfig.Prompt
-	}
-	
-	return &scriptConfig, prompt, nil
+	return &scriptConfig, nil
 }
