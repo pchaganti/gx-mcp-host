@@ -271,11 +271,10 @@ func (r *MessageRenderer) RenderToolCallMessage(toolName, toolArgs string, times
 	
 	// Create header with tool icon and name
 	toolIcon := "🔧"
-	toolNameFormatted := r.formatToolName(toolName)
 	header := baseStyle.
 		Foreground(toolColor).
 		Bold(true).
-		Render(fmt.Sprintf("%s Calling %s", toolIcon, toolNameFormatted))
+		Render(fmt.Sprintf("%s Calling %s", toolIcon, toolName))
 
 	// Format arguments in a more readable way
 	var argsContent string
@@ -326,7 +325,7 @@ func (r *MessageRenderer) RenderToolMessage(toolName, toolArgs, toolResult strin
 	// Tool name styling
 	toolNameText := baseStyle.
 		Foreground(mutedColor).
-		Render(fmt.Sprintf("%s: ", r.formatToolName(toolName)))
+		Render(fmt.Sprintf("%s: ", toolName))
 
 	// Tool arguments styling
 	argsText := baseStyle.
@@ -363,16 +362,6 @@ func (r *MessageRenderer) RenderToolMessage(toolName, toolArgs, toolResult strin
 		Content: rendered,
 		Height:  lipgloss.Height(rendered),
 	}
-}
-
-// formatToolName formats tool names for display
-func (r *MessageRenderer) formatToolName(name string) string {
-	// Remove server prefix if present (server__tool format)
-	parts := strings.Split(name, "__")
-	if len(parts) == 2 {
-		return parts[1]
-	}
-	return name
 }
 
 // formatToolArgs formats tool arguments for display
