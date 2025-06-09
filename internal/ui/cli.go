@@ -32,7 +32,7 @@ func NewCLI() (*CLI, error) {
 	cli.updateSize()
 	cli.messageRenderer = NewMessageRenderer(cli.width)
 	cli.messageContainer = NewMessageContainer(cli.width, cli.height-4) // Reserve space for input and help
-	
+
 	return cli, nil
 }
 
@@ -46,10 +46,10 @@ func (c *CLI) GetPrompt() (string, error) {
 		BorderForeground(mutedColor).
 		MarginTop(1).
 		MarginBottom(1)
-	
+
 	// Render the divider
 	fmt.Print(dividerStyle.Render(""))
-	
+
 	var prompt string
 	err := huh.NewForm(huh.NewGroup(huh.NewText().
 		Title("Enter your prompt (Type /help for commands, Ctrl+C to quit)").
@@ -73,11 +73,11 @@ func (c *CLI) GetPrompt() (string, error) {
 func (c *CLI) ShowSpinner(message string, action func() error) error {
 	spinner := NewSpinner(message)
 	spinner.Start()
-	
+
 	err := action()
-	
+
 	spinner.Stop()
-	
+
 	return err
 }
 
@@ -104,7 +104,7 @@ func (c *CLI) DisplayAssistantMessageWithModel(message, modelName string) error 
 // DisplayToolCallMessage displays a tool call in progress
 func (c *CLI) DisplayToolCallMessage(toolName, toolArgs string) {
 	msg := c.messageRenderer.RenderToolCallMessage(toolName, toolArgs, time.Now())
-	
+
 	// Always display immediately - spinner management is handled externally
 	c.messageContainer.AddMessage(msg)
 	c.displayContainer()
@@ -113,7 +113,7 @@ func (c *CLI) DisplayToolCallMessage(toolName, toolArgs string) {
 // DisplayToolMessage displays a tool call message
 func (c *CLI) DisplayToolMessage(toolName, toolArgs, toolResult string, isError bool) {
 	msg := c.messageRenderer.RenderToolMessage(toolName, toolArgs, toolResult, isError)
-	
+
 	// Always display immediately - spinner management is handled externally
 	c.messageContainer.AddMessage(msg)
 	c.displayContainer()
@@ -123,7 +123,7 @@ func (c *CLI) DisplayToolMessage(toolName, toolArgs, toolResult string, isError 
 func (c *CLI) DisplayStreamingMessage(reader *schema.StreamReader[*schema.Message]) error {
 	// For streaming, we'll collect the content and then display it
 	var content strings.Builder
-	
+
 	for {
 		msg, err := reader.Recv()
 		if err == io.EOF {
@@ -175,7 +175,7 @@ You can also just type your message to chat with the AI assistant.`
 func (c *CLI) DisplayTools(tools []string) {
 	var content strings.Builder
 	content.WriteString("## Available Tools\n\n")
-	
+
 	if len(tools) == 0 {
 		content.WriteString("No tools are currently available.")
 	} else {
@@ -183,7 +183,7 @@ func (c *CLI) DisplayTools(tools []string) {
 			content.WriteString(fmt.Sprintf("%d. `%s`\n", i+1, tool))
 		}
 	}
-	
+
 	// Display as a system message
 	msg := c.messageRenderer.RenderSystemMessage(content.String(), time.Now())
 	c.messageContainer.AddMessage(msg)
@@ -194,7 +194,7 @@ func (c *CLI) DisplayTools(tools []string) {
 func (c *CLI) DisplayServers(servers []string) {
 	var content strings.Builder
 	content.WriteString("## Configured MCP Servers\n\n")
-	
+
 	if len(servers) == 0 {
 		content.WriteString("No MCP servers are currently configured.")
 	} else {
@@ -202,7 +202,7 @@ func (c *CLI) DisplayServers(servers []string) {
 			content.WriteString(fmt.Sprintf("%d. `%s`\n", i+1, server))
 		}
 	}
-	
+
 	// Display as a system message
 	msg := c.messageRenderer.RenderSystemMessage(content.String(), time.Now())
 	c.messageContainer.AddMessage(msg)
@@ -213,7 +213,7 @@ func (c *CLI) DisplayServers(servers []string) {
 func (c *CLI) DisplayHistory(messages []*schema.Message) {
 	// Create a temporary container for history
 	historyContainer := NewMessageContainer(c.width, c.height-4)
-	
+
 	for _, msg := range messages {
 		switch msg.Role {
 		case schema.User:
@@ -224,7 +224,7 @@ func (c *CLI) DisplayHistory(messages []*schema.Message) {
 			historyContainer.AddMessage(uiMsg)
 		}
 	}
-	
+
 	fmt.Println("\nConversation History:")
 	fmt.Println(historyContainer.Render())
 }
@@ -282,10 +282,10 @@ func (c *CLI) updateSize() {
 		c.height = 24 // Fallback height
 		return
 	}
-	
+
 	c.width = width
 	c.height = height
-	
+
 	// Update renderers if they exist
 	if c.messageRenderer != nil {
 		c.messageRenderer.SetWidth(c.width)
@@ -294,4 +294,3 @@ func (c *CLI) updateSize() {
 		c.messageContainer.SetSize(c.width, c.height-4)
 	}
 }
-

@@ -139,7 +139,7 @@ func runNormalMode(ctx context.Context) error {
 	// Load configuration
 	var mcpConfig *config.Config
 	var err error
-	
+
 	if scriptMCPConfig != nil {
 		// Use script-provided config
 		mcpConfig = scriptMCPConfig
@@ -232,7 +232,7 @@ func runNormalMode(ctx context.Context) error {
 	if agentMaxSteps == 0 {
 		agentMaxSteps = 1000 // Set a high limit for "unlimited"
 	}
-	
+
 	agentConfig := &agent.AgentConfig{
 		ModelConfig:   modelConfig,
 		MCPConfig:     mcpConfig,
@@ -288,17 +288,17 @@ func runNormalMode(ctx context.Context) error {
 
 	// Main interaction logic
 	var messages []*schema.Message
-	
+
 	// Check if running in non-interactive mode
 	if promptFlag != "" {
 		return runNonInteractiveMode(ctx, mcpAgent, cli, promptFlag, modelName, messages, quietFlag)
 	}
-	
+
 	// Quiet mode is not allowed in interactive mode
 	if quietFlag {
 		return fmt.Errorf("--quiet flag can only be used with --prompt/-p")
 	}
-	
+
 	return runInteractiveMode(ctx, mcpAgent, cli, serverNames, toolNames, modelName, messages)
 }
 
@@ -315,13 +315,13 @@ func runNonInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.C
 	// Get agent response with controlled spinner that stops for tool call display
 	var response *schema.Message
 	var currentSpinner *ui.Spinner
-	
+
 	// Start initial spinner (skip if quiet)
 	if !quiet && cli != nil {
 		currentSpinner = ui.NewSpinner("Thinking...")
 		currentSpinner.Start()
 	}
-	
+
 	response, err := mcpAgent.GenerateWithLoop(ctx, messages,
 		// Tool call handler - called when a tool is about to be executed
 		func(toolName, toolArgs string) {
@@ -385,7 +385,7 @@ func runNonInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.C
 			}
 		},
 	)
-	
+
 	// Make sure spinner is stopped if still running
 	if !quiet && cli != nil && currentSpinner != nil {
 		currentSpinner.Stop()
@@ -454,11 +454,11 @@ func runInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.CLI,
 		// Get agent response with controlled spinner that stops for tool call display
 		var response *schema.Message
 		var currentSpinner *ui.Spinner
-		
+
 		// Start initial spinner
 		currentSpinner = ui.NewSpinner("Thinking...")
 		currentSpinner.Start()
-		
+
 		response, err = mcpAgent.GenerateWithLoop(ctx, messages,
 			// Tool call handler - called when a tool is about to be executed
 			func(toolName, toolArgs string) {
@@ -511,7 +511,7 @@ func runInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.CLI,
 				currentSpinner.Start()
 			},
 		)
-		
+
 		// Make sure spinner is stopped if still running
 		if currentSpinner != nil {
 			currentSpinner.Stop()
@@ -531,17 +531,15 @@ func runInteractiveMode(ctx context.Context, mcpAgent *agent.Agent, cli *ui.CLI,
 	}
 }
 
-
-
 // runScriptMode handles script mode execution
 func runScriptMode(ctx context.Context) error {
 	var scriptFile string
-	
+
 	// Determine script file from arguments
 	// When called via shebang, the script file is the first non-flag argument
 	// When called with --script flag, we need to find the script file in args
 	args := os.Args[1:]
-	
+
 	// Filter out flags to find the script file
 	for _, arg := range args {
 		if arg == "--script" {
@@ -556,17 +554,17 @@ func runScriptMode(ctx context.Context) error {
 		scriptFile = arg
 		break
 	}
-	
+
 	if scriptFile == "" {
 		return fmt.Errorf("script mode requires a script file argument")
 	}
-	
+
 	// Parse the script file
 	scriptConfig, err := parseScriptFile(scriptFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse script file: %v", err)
 	}
-	
+
 	// Override the global configFile and promptFlag with script values
 	originalConfigFile := configFile
 	originalPromptFlag := promptFlag
@@ -580,7 +578,7 @@ func runScriptMode(ctx context.Context) error {
 	originalGoogleAPIKey := googleAPIKey
 	originalOpenAIURL := openaiBaseURL
 	originalAnthropicURL := anthropicBaseURL
-	
+
 	// Create config from script or load normal config
 	var mcpConfig *config.Config
 	if len(scriptConfig.MCPServers) > 0 {
@@ -627,10 +625,10 @@ func runScriptMode(ctx context.Context) error {
 			mcpConfig.Prompt = scriptConfig.Prompt
 		}
 	}
-	
+
 	// Override the global config for normal mode
 	scriptMCPConfig = mcpConfig
-	
+
 	// Apply script configuration to global flags
 	if mcpConfig.Prompt != "" {
 		promptFlag = mcpConfig.Prompt
@@ -665,7 +663,7 @@ func runScriptMode(ctx context.Context) error {
 	if mcpConfig.AnthropicURL != "" {
 		anthropicBaseURL = mcpConfig.AnthropicURL
 	}
-	
+
 	// Restore original values after execution
 	defer func() {
 		configFile = originalConfigFile
@@ -682,7 +680,7 @@ func runScriptMode(ctx context.Context) error {
 		anthropicBaseURL = originalAnthropicURL
 		scriptMCPConfig = nil
 	}()
-	
+
 	// Now run the normal execution path which will use our overridden config
 	return runNormalMode(ctx)
 }
@@ -694,9 +692,9 @@ func parseScriptFile(filename string) (*config.Config, error) {
 		return nil, err
 	}
 	defer file.Close()
-	
+
 	scanner := bufio.NewScanner(file)
-	
+
 	// Skip shebang line if present
 	if scanner.Scan() {
 		line := scanner.Text()
@@ -705,7 +703,7 @@ func parseScriptFile(filename string) (*config.Config, error) {
 			return parseScriptContent(line + "\n" + readRemainingLines(scanner))
 		}
 	}
-	
+
 	// Read the rest of the file
 	content := readRemainingLines(scanner)
 	return parseScriptContent(content)
@@ -723,20 +721,20 @@ func readRemainingLines(scanner *bufio.Scanner) string {
 // parseScriptContent parses the content to extract YAML frontmatter
 func parseScriptContent(content string) (*config.Config, error) {
 	lines := strings.Split(content, "\n")
-	
+
 	// Find YAML frontmatter
 	var yamlLines []string
-	
+
 	for _, line := range lines {
 		yamlLines = append(yamlLines, line)
 	}
-	
+
 	// Parse YAML
 	yamlContent := strings.Join(yamlLines, "\n")
 	var scriptConfig config.Config
 	if err := yaml.Unmarshal([]byte(yamlContent), &scriptConfig); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %v", err)
 	}
-	
+
 	return &scriptConfig, nil
 }

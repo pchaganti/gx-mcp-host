@@ -31,12 +31,12 @@ type MessageModifier func(ctx context.Context, input []*schema.Message) []*schem
 
 // AgentConfig is the config for agent.
 type AgentConfig struct {
-	ModelConfig      *models.ProviderConfig
-	MCPConfig        *config.Config
-	SystemPrompt     string
-	MaxSteps         int
-	MessageWindow    int
-	
+	ModelConfig   *models.ProviderConfig
+	MCPConfig     *config.Config
+	SystemPrompt  string
+	MaxSteps      int
+	MessageWindow int
+
 	// MessageModifier.
 	// modify the input messages before the model is called, it's useful when you want to add some system prompt or other messages.
 	MessageModifier MessageModifier
@@ -146,7 +146,7 @@ func NewAgent(ctx context.Context, config *AgentConfig) (*Agent, error) {
 
 	// Only set up tools if we have any
 	hasTools := len(toolsConfig.Tools) > 0
-	
+
 	if hasTools {
 		if toolInfos, err = genToolInfos(ctx, toolsConfig); err != nil {
 			return nil, err
@@ -185,7 +185,7 @@ func NewAgent(ctx context.Context, config *AgentConfig) (*Agent, error) {
 			if len(state.Messages) > 0 && state.Messages[0].Role == schema.System {
 				hasSystemMessage = true
 			}
-			
+
 			if !hasSystemMessage {
 				systemMsg := schema.SystemMessage(config.SystemPrompt)
 				state.Messages = append([]*schema.Message{systemMsg}, state.Messages...)
@@ -368,9 +368,9 @@ func (a *Agent) Stream(ctx context.Context, input []*schema.Message, opts ...com
 }
 
 // GenerateWithLoop processes messages with a custom loop that displays tool calls in real-time
-func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message, 
+func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message,
 	onToolCall ToolCallHandler, onToolExecution ToolExecutionHandler, onToolResult ToolResultHandler, onResponse ResponseHandler, onToolCallContent ToolCallContentHandler) (*schema.Message, error) {
-	
+
 	// Create a copy of messages to avoid modifying the original
 	workingMessages := make([]*schema.Message, len(messages))
 	copy(workingMessages, messages)
@@ -381,7 +381,7 @@ func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message
 		if len(workingMessages) > 0 && workingMessages[0].Role == schema.System {
 			hasSystemMessage = true
 		}
-		
+
 		if !hasSystemMessage {
 			systemMsg := schema.SystemMessage(a.systemPrompt)
 			workingMessages = append([]*schema.Message{systemMsg}, workingMessages...)
@@ -392,7 +392,7 @@ func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message
 	availableTools := a.toolManager.GetTools()
 	var toolInfos []*schema.ToolInfo
 	toolMap := make(map[string]tool.BaseTool)
-	
+
 	for _, t := range availableTools {
 		info, err := t.Info(ctx)
 		if err != nil {
@@ -419,7 +419,7 @@ func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message
 			if response.Content != "" && onToolCallContent != nil {
 				onToolCallContent(response.Content)
 			}
-			
+
 			// Handle tool calls
 			for _, toolCall := range response.ToolCalls {
 				// Notify about tool call
@@ -433,26 +433,26 @@ func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message
 					if onToolExecution != nil {
 						onToolExecution(toolCall.Function.Name, true)
 					}
-					
+
 					output, err := selectedTool.(tool.InvokableTool).InvokableRun(ctx, toolCall.Function.Arguments)
-					
+
 					// Notify tool execution end
 					if onToolExecution != nil {
 						onToolExecution(toolCall.Function.Name, false)
 					}
-					
+
 					if err != nil {
 						errorMsg := fmt.Sprintf("Tool execution error: %v", err)
 						toolMessage := schema.ToolMessage(errorMsg, toolCall.ID)
 						workingMessages = append(workingMessages, toolMessage)
-						
+
 						if onToolResult != nil {
 							onToolResult(toolCall.Function.Name, toolCall.Function.Arguments, errorMsg, true)
 						}
 					} else {
 						toolMessage := schema.ToolMessage(output, toolCall.ID)
 						workingMessages = append(workingMessages, toolMessage)
-						
+
 						if onToolResult != nil {
 							onToolResult(toolCall.Function.Name, toolCall.Function.Arguments, output, false)
 						}
@@ -461,7 +461,7 @@ func (a *Agent) GenerateWithLoop(ctx context.Context, messages []*schema.Message
 					errorMsg := fmt.Sprintf("Tool not found: %s", toolCall.Function.Name)
 					toolMessage := schema.ToolMessage(errorMsg, toolCall.ID)
 					workingMessages = append(workingMessages, toolMessage)
-					
+
 					if onToolResult != nil {
 						onToolResult(toolCall.Function.Name, toolCall.Function.Arguments, errorMsg, true)
 					}

@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino-ext/components/model/claude"
 	"github.com/cloudwego/eino-ext/components/model/gemini"
 	"github.com/cloudwego/eino-ext/components/model/ollama"
 	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/components/model"
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
 )

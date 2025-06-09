@@ -30,7 +30,7 @@ func (c *CLI) CreateCallbackHandler() callbacks.Handler {
 			return ctx
 		},
 	}
-	
+
 	return utilCallbacks.NewHandlerHelper().
 		Tool(toolHandler).
 		Handler()

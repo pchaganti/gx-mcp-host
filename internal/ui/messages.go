@@ -22,12 +22,12 @@ const (
 
 // UIMessage represents a rendered message for display
 type UIMessage struct {
-	ID          string
-	Type        MessageType
-	Position    int
-	Height      int
-	Content     string
-	Timestamp   time.Time
+	ID        string
+	Type      MessageType
+	Position  int
+	Height    int
+	Content   string
+	Timestamp time.Time
 }
 
 // Color constants
@@ -61,7 +61,7 @@ func (r *MessageRenderer) SetWidth(width int) {
 // RenderUserMessage renders a user message with proper styling
 func (r *MessageRenderer) RenderUserMessage(content string, timestamp time.Time) UIMessage {
 	baseStyle := lipgloss.NewStyle()
-	
+
 	// Create the main message style with border
 	style := baseStyle.
 		Width(r.width - 1).
@@ -74,7 +74,7 @@ func (r *MessageRenderer) RenderUserMessage(content string, timestamp time.Time)
 	// Format timestamp
 	timeStr := timestamp.Local().Format("02 Jan 2006 03:04 PM")
 	username := "You"
-	
+
 	// Create info line
 	info := baseStyle.
 		Width(r.width - 1).
@@ -83,7 +83,7 @@ func (r *MessageRenderer) RenderUserMessage(content string, timestamp time.Time)
 
 	// Render the message content
 	messageContent := r.renderMarkdown(content, r.width-2)
-	
+
 	// Combine content and info
 	parts := []string{
 		strings.TrimSuffix(messageContent, "\n"),
@@ -105,7 +105,7 @@ func (r *MessageRenderer) RenderUserMessage(content string, timestamp time.Time)
 // RenderAssistantMessage renders an assistant message with proper styling
 func (r *MessageRenderer) RenderAssistantMessage(content string, timestamp time.Time, modelName string) UIMessage {
 	baseStyle := lipgloss.NewStyle()
-	
+
 	// Create the main message style with border
 	style := baseStyle.
 		Width(r.width - 1).
@@ -120,7 +120,7 @@ func (r *MessageRenderer) RenderAssistantMessage(content string, timestamp time.
 	if modelName == "" {
 		modelName = "Assistant"
 	}
-	
+
 	// Create info line
 	info := baseStyle.
 		Width(r.width - 1).
@@ -129,7 +129,7 @@ func (r *MessageRenderer) RenderAssistantMessage(content string, timestamp time.
 
 	// Render the message content
 	messageContent := r.renderMarkdown(content, r.width-2)
-	
+
 	// Handle empty content
 	if strings.TrimSpace(content) == "" {
 		messageContent = baseStyle.
@@ -137,7 +137,7 @@ func (r *MessageRenderer) RenderAssistantMessage(content string, timestamp time.
 			Foreground(mutedColor).
 			Render("*Finished without output*")
 	}
-	
+
 	// Combine content and info
 	parts := []string{
 		strings.TrimSuffix(messageContent, "\n"),
@@ -159,7 +159,7 @@ func (r *MessageRenderer) RenderAssistantMessage(content string, timestamp time.
 // RenderSystemMessage renders a system message (help, tools, etc.) with proper styling
 func (r *MessageRenderer) RenderSystemMessage(content string, timestamp time.Time) UIMessage {
 	baseStyle := lipgloss.NewStyle()
-	
+
 	// Create the main message style with border
 	style := baseStyle.
 		Width(r.width - 1).
@@ -171,7 +171,7 @@ func (r *MessageRenderer) RenderSystemMessage(content string, timestamp time.Tim
 
 	// Format timestamp
 	timeStr := timestamp.Local().Format("02 Jan 2006 03:04 PM")
-	
+
 	// Create info line with MCPHost label
 	info := baseStyle.
 		Width(r.width - 1).
@@ -180,7 +180,7 @@ func (r *MessageRenderer) RenderSystemMessage(content string, timestamp time.Tim
 
 	// Render the message content with markdown
 	messageContent := r.renderMarkdown(content, r.width-2)
-	
+
 	// Handle empty content
 	if strings.TrimSpace(content) == "" {
 		messageContent = baseStyle.
@@ -188,7 +188,7 @@ func (r *MessageRenderer) RenderSystemMessage(content string, timestamp time.Tim
 			Foreground(mutedColor).
 			Render("*No content*")
 	}
-	
+
 	// Combine content and info
 	parts := []string{
 		strings.TrimSuffix(messageContent, "\n"),
@@ -210,7 +210,7 @@ func (r *MessageRenderer) RenderSystemMessage(content string, timestamp time.Tim
 // RenderErrorMessage renders an error message with proper styling
 func (r *MessageRenderer) RenderErrorMessage(errorMsg string, timestamp time.Time) UIMessage {
 	baseStyle := lipgloss.NewStyle()
-	
+
 	// Create the main message style with border
 	style := baseStyle.
 		Width(r.width - 1).
@@ -222,7 +222,7 @@ func (r *MessageRenderer) RenderErrorMessage(errorMsg string, timestamp time.Tim
 
 	// Format timestamp
 	timeStr := timestamp.Local().Format("02 Jan 2006 03:04 PM")
-	
+
 	// Create info line with Error label
 	info := baseStyle.
 		Width(r.width - 1).
@@ -234,7 +234,7 @@ func (r *MessageRenderer) RenderErrorMessage(errorMsg string, timestamp time.Tim
 		Foreground(errorColor).
 		Bold(true).
 		Render(fmt.Sprintf("❌ %s", errorMsg))
-	
+
 	// Combine content and info
 	parts := []string{
 		errorContent,
@@ -256,7 +256,7 @@ func (r *MessageRenderer) RenderErrorMessage(errorMsg string, timestamp time.Tim
 // RenderToolCallMessage renders a tool call in progress with proper styling
 func (r *MessageRenderer) RenderToolCallMessage(toolName, toolArgs string, timestamp time.Time) UIMessage {
 	baseStyle := lipgloss.NewStyle()
-	
+
 	// Create the main message style with border
 	style := baseStyle.
 		Width(r.width - 1).
@@ -268,7 +268,7 @@ func (r *MessageRenderer) RenderToolCallMessage(toolName, toolArgs string, times
 
 	// Format timestamp
 	timeStr := timestamp.Local().Format("02 Jan 2006 03:04 PM")
-	
+
 	// Create header with tool icon and name
 	toolIcon := "🔧"
 	header := baseStyle.
@@ -313,7 +313,7 @@ func (r *MessageRenderer) RenderToolCallMessage(toolName, toolArgs string, times
 // RenderToolMessage renders a tool call message with proper styling
 func (r *MessageRenderer) RenderToolMessage(toolName, toolArgs, toolResult string, isError bool) UIMessage {
 	baseStyle := lipgloss.NewStyle()
-	
+
 	// Create the main message style with border
 	style := baseStyle.
 		Width(r.width - 1).
@@ -348,7 +348,7 @@ func (r *MessageRenderer) RenderToolMessage(toolName, toolArgs, toolResult strin
 	// Combine parts
 	headerLine := lipgloss.JoinHorizontal(lipgloss.Left, toolNameText, argsText)
 	parts := []string{headerLine}
-	
+
 	if resultContent != "" {
 		parts = append(parts, strings.TrimSuffix(resultContent, "\n"))
 	}
@@ -373,25 +373,25 @@ func (r *MessageRenderer) formatToolArgs(args string) string {
 		args = strings.TrimSuffix(args, "}")
 		args = strings.TrimSpace(args)
 	}
-	
+
 	// If it's empty after cleanup, return a placeholder
 	if args == "" {
 		return "(no arguments)"
 	}
-	
+
 	// Truncate if too long
 	maxLen := 100
 	if len(args) > maxLen {
 		return args[:maxLen] + "..."
 	}
-	
+
 	return args
 }
 
 // formatToolResult formats tool results based on tool type
 func (r *MessageRenderer) formatToolResult(toolName, result string, width int) string {
 	baseStyle := lipgloss.NewStyle()
-	
+
 	// Truncate very long results
 	maxLines := 10
 	lines := strings.Split(result, "\n")
@@ -416,11 +416,11 @@ func (r *MessageRenderer) formatToolResult(toolName, result string, width int) s
 func (r *MessageRenderer) truncateText(text string, maxWidth int) string {
 	// Replace newlines with spaces for single-line display
 	text = strings.ReplaceAll(text, "\n", " ")
-	
+
 	if lipgloss.Width(text) <= maxWidth {
 		return text
 	}
-	
+
 	// Simple truncation - could be improved with proper unicode handling
 	for i := len(text) - 1; i >= 0; i-- {
 		truncated := text[:i] + "..."
@@ -428,7 +428,7 @@ func (r *MessageRenderer) truncateText(text string, maxWidth int) string {
 			return truncated
 		}
 	}
-	
+
 	return "..."
 }
 

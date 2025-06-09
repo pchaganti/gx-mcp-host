@@ -120,7 +120,7 @@ func (m *MCPToolManager) LoadTools(ctx context.Context, config *config.Config) e
 			if !m.shouldIncludeTool(mcpTool.Name, serverConfig) {
 				continue
 			}
-			
+
 			einoTool := &MCPTool{
 				client:   client,
 				toolInfo: &mcpTool,
@@ -159,7 +159,7 @@ func (m *MCPToolManager) shouldIncludeTool(toolName string, serverConfig config.
 		}
 		return false
 	}
-	
+
 	// If excludedTools is specified, exclude tools in the list
 	if len(serverConfig.ExcludedTools) > 0 {
 		for _, excludedTool := range serverConfig.ExcludedTools {
@@ -168,7 +168,7 @@ func (m *MCPToolManager) shouldIncludeTool(toolName string, serverConfig config.
 			}
 		}
 	}
-	
+
 	// Include by default
 	return true
 }
@@ -183,12 +183,12 @@ func (m *MCPToolManager) createMCPClient(ctx context.Context, serverName string,
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Start the SSE client
 		if err := sseClient.Start(ctx); err != nil {
 			return nil, fmt.Errorf("failed to start SSE client: %v", err)
 		}
-		
+
 		return sseClient, nil
 	}
 

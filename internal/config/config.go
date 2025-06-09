@@ -10,28 +10,28 @@ import (
 
 // MCPServerConfig represents configuration for an MCP server
 type MCPServerConfig struct {
-	Command      string   `json:"command,omitempty"`
-	Args         []string `json:"args,omitempty"`
-	URL          string   `json:"url,omitempty"`
-	Headers      []string `json:"headers,omitempty"`
-	AllowedTools []string `json:"allowedTools,omitempty"`
+	Command       string   `json:"command,omitempty"`
+	Args          []string `json:"args,omitempty"`
+	URL           string   `json:"url,omitempty"`
+	Headers       []string `json:"headers,omitempty"`
+	AllowedTools  []string `json:"allowedTools,omitempty"`
 	ExcludedTools []string `json:"excludedTools,omitempty"`
 }
 
 // Config represents the application configuration
 type Config struct {
-	MCPServers       map[string]MCPServerConfig `json:"mcpServers" yaml:"mcpServers"`
-	Model            string                     `json:"model,omitempty" yaml:"model,omitempty"`
-	MaxSteps         int                        `json:"max-steps,omitempty" yaml:"max-steps,omitempty"`
-	MessageWindow    int                        `json:"message-window,omitempty" yaml:"message-window,omitempty"`
-	Debug            bool                       `json:"debug,omitempty" yaml:"debug,omitempty"`
-	SystemPrompt     string                     `json:"system-prompt,omitempty" yaml:"system-prompt,omitempty"`
-	OpenAIAPIKey     string                     `json:"openai-api-key,omitempty" yaml:"openai-api-key,omitempty"`
-	AnthropicAPIKey  string                     `json:"anthropic-api-key,omitempty" yaml:"anthropic-api-key,omitempty"`
-	GoogleAPIKey     string                     `json:"google-api-key,omitempty" yaml:"google-api-key,omitempty"`
-	OpenAIURL        string                     `json:"openai-url,omitempty" yaml:"openai-url,omitempty"`
-	AnthropicURL     string                     `json:"anthropic-url,omitempty" yaml:"anthropic-url,omitempty"`
-	Prompt           string                     `json:"prompt,omitempty" yaml:"prompt,omitempty"`
+	MCPServers      map[string]MCPServerConfig `json:"mcpServers" yaml:"mcpServers"`
+	Model           string                     `json:"model,omitempty" yaml:"model,omitempty"`
+	MaxSteps        int                        `json:"max-steps,omitempty" yaml:"max-steps,omitempty"`
+	MessageWindow   int                        `json:"message-window,omitempty" yaml:"message-window,omitempty"`
+	Debug           bool                       `json:"debug,omitempty" yaml:"debug,omitempty"`
+	SystemPrompt    string                     `json:"system-prompt,omitempty" yaml:"system-prompt,omitempty"`
+	OpenAIAPIKey    string                     `json:"openai-api-key,omitempty" yaml:"openai-api-key,omitempty"`
+	AnthropicAPIKey string                     `json:"anthropic-api-key,omitempty" yaml:"anthropic-api-key,omitempty"`
+	GoogleAPIKey    string                     `json:"google-api-key,omitempty" yaml:"google-api-key,omitempty"`
+	OpenAIURL       string                     `json:"openai-url,omitempty" yaml:"openai-url,omitempty"`
+	AnthropicURL    string                     `json:"anthropic-url,omitempty" yaml:"anthropic-url,omitempty"`
+	Prompt          string                     `json:"prompt,omitempty" yaml:"prompt,omitempty"`
 }
 
 // Validate validates the configuration
@@ -52,24 +52,24 @@ type SystemPromptConfig struct {
 // LoadMCPConfig loads MCP configuration from file
 func LoadMCPConfig(configFile string) (*Config, error) {
 	v := viper.New()
-	
+
 	if configFile == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return nil, fmt.Errorf("error getting home directory: %v", err)
 		}
-		
+
 		// Try .mcphost files first (new format), then .mcp files (backwards compatibility)
 		configNames := []string{".mcphost", ".mcp"}
 		configTypes := []string{"yaml", "json"}
-		
+
 		var configFound bool
 		for _, configName := range configNames {
 			for _, configType := range configTypes {
 				v.SetConfigName(configName)
 				v.SetConfigType(configType)
 				v.AddConfigPath(homeDir)
-				
+
 				if err := v.ReadInConfig(); err == nil {
 					configFound = true
 					break
@@ -79,7 +79,7 @@ func LoadMCPConfig(configFile string) (*Config, error) {
 				break
 			}
 		}
-		
+
 		if !configFound {
 			// Create default config file
 			if err := createDefaultConfig(homeDir); err != nil {
@@ -88,7 +88,7 @@ func LoadMCPConfig(configFile string) (*Config, error) {
 					MCPServers: make(map[string]MCPServerConfig),
 				}, nil
 			}
-			
+
 			// Try to load the newly created config
 			v.SetConfigName(".mcphost")
 			v.SetConfigType("yaml")
@@ -129,7 +129,7 @@ func LoadSystemPrompt(filePath string) (string, error) {
 
 	v := viper.New()
 	v.SetConfigFile(filePath)
-	
+
 	if err := v.ReadInConfig(); err != nil {
 		return "", fmt.Errorf("error reading system prompt file: %v", err)
 	}
@@ -145,14 +145,14 @@ func LoadSystemPrompt(filePath string) (string, error) {
 // createDefaultConfig creates a default .mcphost.yml file in the user's home directory
 func createDefaultConfig(homeDir string) error {
 	configPath := filepath.Join(homeDir, ".mcphost.yml")
-	
+
 	// Create the file
 	file, err := os.Create(configPath)
 	if err != nil {
 		return fmt.Errorf("error creating config file: %v", err)
 	}
 	defer file.Close()
-	
+
 	// Write a clean YAML template
 	content := `# MCPHost Configuration File
 # All command-line flags can be configured here
@@ -184,11 +184,11 @@ mcpServers:
 # openai-url: "https://api.openai.com/v1"
 # anthropic-url: "https://api.anthropic.com"
 `
-	
+
 	_, err = file.WriteString(content)
 	if err != nil {
 		return fmt.Errorf("error writing config content: %v", err)
 	}
-	
+
 	return nil
 }
