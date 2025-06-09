@@ -80,7 +80,15 @@ go install github.com/mark3labs/mcphost@latest
 ## Configuration ⚙️
 
 ### MCP-server
-MCPHost will automatically create a configuration file at `~/.mcp.json` if it doesn't exist. You can also specify a custom location using the `--config` flag.
+MCPHost will automatically create a configuration file in your home directory if it doesn't exist. It looks for config files in this order:
+- `.mcphost.yml` or `.mcphost.json` (preferred)
+- `.mcp.yml` or `.mcp.json` (backwards compatibility)
+
+**Config file locations by OS:**
+- **Linux/macOS**: `~/.mcphost.yml`, `~/.mcphost.json`, `~/.mcp.yml`, `~/.mcp.json`
+- **Windows**: `%USERPROFILE%\.mcphost.yml`, `%USERPROFILE%\.mcphost.json`, `%USERPROFILE%\.mcp.yml`, `%USERPROFILE%\.mcp.json`
+
+You can also specify a custom location using the `--config` flag.
 
 #### STDIO
 The configuration for an STDIO MCP-server should be defined as the following:
@@ -268,17 +276,47 @@ mcphost -p "Generate a random UUID" --quiet | tr '[:lower:]' '[:upper:]'
 ### Flags
 - `--anthropic-url string`: Base URL for Anthropic API (defaults to api.anthropic.com)
 - `--anthropic-api-key string`: Anthropic API key (can also be set via ANTHROPIC_API_KEY environment variable)
-- `--config string`: Config file location (default is $HOME/.mcp.json)
+- `--config string`: Config file location (default is $HOME/.mcphost.yml)
 - `--system-prompt string`: system-prompt file location
 - `--debug`: Enable debug logging
-- `--message-window int`: Number of messages to keep in context (default: 10)
-- `-m, --model string`: Model to use (format: provider:model) (default "anthropic:claude-3-5-sonnet-latest")
+- `--max-steps int`: Maximum number of agent steps (0 for unlimited, default: 0)
+- `--message-window int`: Number of messages to keep in context (default: 40)
+- `-m, --model string`: Model to use (format: provider:model) (default "anthropic:claude-sonnet-4-20250514")
 - `--openai-url string`: Base URL for OpenAI API (defaults to api.openai.com)
 - `--openai-api-key string`: OpenAI API key (can also be set via OPENAI_API_KEY environment variable)
 - `--google-api-key string`: Google API key (can also be set via GOOGLE_API_KEY environment variable)
 - `-p, --prompt string`: **Run in non-interactive mode with the given prompt**
 - `--quiet`: **Suppress all output except the AI response (only works with --prompt)**
 - `--script`: **Run in script mode (parse YAML frontmatter and prompt from file)**
+
+### Configuration File Support
+
+All command-line flags can be configured via the config file. MCPHost will look for configuration in this order:
+1. `~/.mcphost.yml` or `~/.mcphost.json` (preferred)
+2. `~/.mcp.yml` or `~/.mcp.json` (backwards compatibility)
+
+Example config file (`~/.mcphost.yml`):
+```yaml
+# MCP Servers
+mcpServers:
+  filesystem:
+    command: npx
+    args: ["@modelcontextprotocol/server-filesystem", "/path/to/files"]
+
+# Application settings
+model: "anthropic:claude-sonnet-4-20250514"
+max-steps: 20
+message-window: 40
+debug: false
+system-prompt: "/path/to/system-prompt.json"
+
+# API keys (can also use environment variables)
+anthropic-api-key: "your-key-here"
+openai-api-key: "your-key-here"
+google-api-key: "your-key-here"
+```
+
+**Note**: Command-line flags take precedence over config file values.
 
 
 ### Interactive Commands

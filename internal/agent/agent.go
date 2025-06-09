@@ -144,17 +144,27 @@ func NewAgent(ctx context.Context, config *AgentConfig) (*Agent, error) {
 		Tools: toolManager.GetTools(),
 	}
 
-	if toolInfos, err = genToolInfos(ctx, toolsConfig); err != nil {
-		return nil, err
+	// Only set up tools if we have any
+	hasTools := len(toolsConfig.Tools) > 0
+	
+	if hasTools {
+		if toolInfos, err = genToolInfos(ctx, toolsConfig); err != nil {
+			return nil, err
+		}
+
+		if toolsNode, err = compose.NewToolNode(ctx, &toolsConfig); err != nil {
+			return nil, err
+		}
 	}
 
 	chatModel, err := agent.ChatModelWithTools(nil, model, toolInfos)
 	if err != nil {
-		return nil, err
-	}
-
-	if toolsNode, err = compose.NewToolNode(ctx, &toolsConfig); err != nil {
-		return nil, err
+		// If binding tools fails and we have no tools, just use the model directly
+		if !hasTools {
+			chatModel = model
+		} else {
+			return nil, err
+		}
 	}
 
 	maxSteps := config.MaxSteps
@@ -199,37 +209,45 @@ func NewAgent(ctx context.Context, config *AgentConfig) (*Agent, error) {
 		return nil, err
 	}
 
-	toolsNodePreHandle := func(ctx context.Context, input *schema.Message, state *state) (*schema.Message, error) {
-		if input == nil {
-			return state.Messages[len(state.Messages)-1], nil // used for rerun interrupt resume
+	// Only add tools node and related logic if we have tools
+	if hasTools {
+		toolsNodePreHandle := func(ctx context.Context, input *schema.Message, state *state) (*schema.Message, error) {
+			if input == nil {
+				return state.Messages[len(state.Messages)-1], nil // used for rerun interrupt resume
+			}
+			state.Messages = append(state.Messages, input)
+			state.ReturnDirectlyToolCallID = getReturnDirectlyToolCallID(input, config.ToolReturnDirectly)
+			return input, nil
 		}
-		state.Messages = append(state.Messages, input)
-		state.ReturnDirectlyToolCallID = getReturnDirectlyToolCallID(input, config.ToolReturnDirectly)
-		return input, nil
-	}
-	if err = graph.AddToolsNode(nodeKeyTools, toolsNode, compose.WithStatePreHandler(toolsNodePreHandle), compose.WithNodeName(ToolsNodeName)); err != nil {
-		return nil, err
-	}
-
-	modelPostBranchCondition := func(_ context.Context, sr *schema.StreamReader[*schema.Message]) (endNode string, err error) {
-		if isToolCall, err := toolCallChecker(ctx, sr); err != nil {
-			return "", err
-		} else if isToolCall {
-			return nodeKeyTools, nil
-		}
-		return compose.END, nil
-	}
-
-	if err = graph.AddBranch(nodeKeyModel, compose.NewStreamGraphBranch(modelPostBranchCondition, map[string]bool{nodeKeyTools: true, compose.END: true})); err != nil {
-		return nil, err
-	}
-
-	if len(config.ToolReturnDirectly) > 0 {
-		if err = buildReturnDirectly(graph); err != nil {
+		if err = graph.AddToolsNode(nodeKeyTools, toolsNode, compose.WithStatePreHandler(toolsNodePreHandle), compose.WithNodeName(ToolsNodeName)); err != nil {
 			return nil, err
 		}
-	} else if err = graph.AddEdge(nodeKeyTools, nodeKeyModel); err != nil {
-		return nil, err
+
+		modelPostBranchCondition := func(_ context.Context, sr *schema.StreamReader[*schema.Message]) (endNode string, err error) {
+			if isToolCall, err := toolCallChecker(ctx, sr); err != nil {
+				return "", err
+			} else if isToolCall {
+				return nodeKeyTools, nil
+			}
+			return compose.END, nil
+		}
+
+		if err = graph.AddBranch(nodeKeyModel, compose.NewStreamGraphBranch(modelPostBranchCondition, map[string]bool{nodeKeyTools: true, compose.END: true})); err != nil {
+			return nil, err
+		}
+
+		if len(config.ToolReturnDirectly) > 0 {
+			if err = buildReturnDirectly(graph); err != nil {
+				return nil, err
+			}
+		} else if err = graph.AddEdge(nodeKeyTools, nodeKeyModel); err != nil {
+			return nil, err
+		}
+	} else {
+		// No tools, so model goes directly to END
+		if err = graph.AddEdge(nodeKeyModel, compose.END); err != nil {
+			return nil, err
+		}
 	}
 
 	compileOpts := []compose.GraphCompileOption{compose.WithMaxRunSteps(maxSteps), compose.WithNodeTriggerMode(compose.AnyPredecessor), compose.WithGraphName(GraphName)}
