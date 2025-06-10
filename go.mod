@@ -12,6 +12,7 @@ require (
 	github.com/cloudwego/eino-ext/components/model/gemini v0.0.0-20250609074000-b7f307dffa18
 	github.com/cloudwego/eino-ext/components/model/ollama v0.0.0-20250609074000-b7f307dffa18
 	github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250609074000-b7f307dffa18
+	github.com/cloudwego/eino-ext/components/tool/mcp v0.0.3
 	github.com/google/generative-ai-go v0.19.0
 	github.com/mark3labs/mcp-go v0.31.0
 	github.com/spf13/cobra v1.8.1

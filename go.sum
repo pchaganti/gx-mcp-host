@@ -105,6 +105,8 @@ github.com/cloudwego/eino-ext/components/model/ollama v0.0.0-20250609074000-b7f3
 github.com/cloudwego/eino-ext/components/model/ollama v0.0.0-20250609074000-b7f307dffa18/go.mod h1:giNUFqA+V7xrm/EDvH7JFnDqoWI+e2m1SVAnReU+Fd8=
 github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250609074000-b7f307dffa18 h1:FAg2QmtJ0tA/3BmQlUPdhZ9Nzzsov76ry7b3Gn86dAs=
 github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250609074000-b7f307dffa18/go.mod h1:DRjlcqCwf2tLgxkBwQz6FX3OzM/sGqDN5xWYbq/ssqY=
+github.com/cloudwego/eino-ext/components/tool/mcp v0.0.3 h1:kT8yynQh8q92BPofkHxxnXslJUj5AKex5+NpMrd+BU4=
+github.com/cloudwego/eino-ext/components/tool/mcp v0.0.3/go.mod h1:D1Yircehgx7em8EH6vw8If+ATjtXl60IpBzVaqFBx3c=
 github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250605072634-0f875e04269d h1:dh7XwH6UAXXH9GQ4NTg4FRmek2tCoQgBGI79vYzwm9g=
 github.com/cloudwego/eino-ext/libs/acl/openai v0.0.0-20250605072634-0f875e04269d/go.mod h1:XKWiwOSkHWN23yd14et8A9khSKSYACU0xu4caySDA5U=
 github.com/cloudwego/iasm v0.2.0/go.mod h1:8rXZaNYT2n95jn+zTI1sDr+IgcD2GVs0nlbbQPiEFhY=

@@ -2,82 +2,15 @@ package tools
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
+	einomcp "github.com/cloudwego/eino-ext/components/tool/mcp"
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcphost/internal/config"
 )
-
-// MCPTool wraps an MCP tool to implement eino's InvokableTool interface
-type MCPTool struct {
-	client   client.MCPClient
-	toolInfo *mcp.Tool
-	name     string
-}
-
-// Info returns the tool information for eino
-func (t *MCPTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
-	// Convert MCP tool schema to eino schema
-	properties := make(map[string]*schema.ParameterInfo)
-
-	// Handle the input schema
-	if t.toolInfo.InputSchema.Properties != nil {
-		for name, prop := range t.toolInfo.InputSchema.Properties {
-			if propMap, ok := prop.(map[string]interface{}); ok {
-				paramInfo := &schema.ParameterInfo{
-					Type: schema.String, // Default type
-				}
-				if typeVal, ok := propMap["type"].(string); ok {
-					paramInfo.Type = schema.DataType(typeVal)
-				}
-				if desc, ok := propMap["description"].(string); ok {
-					paramInfo.Desc = desc
-				}
-				properties[name] = paramInfo
-			}
-		}
-	}
-
-	return &schema.ToolInfo{
-		Name:        t.name,
-		Desc:        t.toolInfo.Description,
-		ParamsOneOf: schema.NewParamsOneOfByParams(properties),
-	}, nil
-}
-
-// InvokableRun implements the InvokableTool interface
-func (t *MCPTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
-	var args map[string]interface{}
-	if err := json.Unmarshal([]byte(argumentsInJSON), &args); err != nil {
-		return "", fmt.Errorf("failed to parse arguments: %v", err)
-	}
-
-	req := mcp.CallToolRequest{}
-	req.Params.Name = t.toolInfo.Name
-	req.Params.Arguments = args
-
-	result, err := t.client.CallTool(ctx, req)
-	if err != nil {
-		return "", fmt.Errorf("failed to call tool: %v", err)
-	}
-
-	// Convert result to string
-	if result.Content != nil {
-		var resultText string
-		for _, item := range result.Content {
-			if textContent, ok := item.(mcp.TextContent); ok {
-				resultText += textContent.Text + " "
-			}
-		}
-		return resultText, nil
-	}
-
-	return "", nil
-}
 
 // MCPToolManager manages MCP tools and clients
 type MCPToolManager struct {
@@ -108,25 +41,45 @@ func (m *MCPToolManager) LoadTools(ctx context.Context, config *config.Config) e
 			return fmt.Errorf("failed to initialize MCP client for %s: %v", serverName, err)
 		}
 
-		// Get tools from this server
-		toolsResult, err := client.ListTools(ctx, mcp.ListToolsRequest{})
-		if err != nil {
-			return fmt.Errorf("failed to list tools from server %s: %v", serverName, err)
+		// Get allowed tools list for this server
+		var allowedTools []string
+		if len(serverConfig.AllowedTools) > 0 {
+			allowedTools = serverConfig.AllowedTools
+		} else {
+			// If no allowed tools specified, get all tools and filter out excluded ones
+			toolsResult, err := client.ListTools(ctx, mcp.ListToolsRequest{})
+			if err != nil {
+				return fmt.Errorf("failed to list tools from server %s: %v", serverName, err)
+			}
+
+			for _, mcpTool := range toolsResult.Tools {
+				if !m.isToolExcluded(mcpTool.Name, serverConfig.ExcludedTools) {
+					allowedTools = append(allowedTools, mcpTool.Name)
+				}
+			}
 		}
 
-		// Convert MCP tools to eino tools
-		for _, mcpTool := range toolsResult.Tools {
-			// Filter tools based on allowedTools/excludedTools
-			if !m.shouldIncludeTool(mcpTool.Name, serverConfig) {
-				continue
-			}
+		// Use eino's MCP tool adapter
+		mcpTools, err := einomcp.GetTools(ctx, &einomcp.Config{
+			Cli:          client,
+			ToolNameList: allowedTools,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get MCP tools from server %s: %v", serverName, err)
+		}
 
-			einoTool := &MCPTool{
-				client:   client,
-				toolInfo: &mcpTool,
-				name:     fmt.Sprintf("%s__%s", serverName, mcpTool.Name),
+		// Add tools directly - eino's MCP adapter should handle everything
+		for _, mcpTool := range mcpTools {
+			// Check if the tool already has a prefix, if not add server prefix
+			if invokableTool, ok := mcpTool.(tool.InvokableTool); ok {
+				wrappedTool := &PrefixedTool{
+					InvokableTool: invokableTool,
+					prefix:        serverName,
+				}
+				m.tools = append(m.tools, wrappedTool)
+			} else {
+				return fmt.Errorf("tool from server %s does not implement InvokableTool interface", serverName)
 			}
-			m.tools = append(m.tools, einoTool)
 		}
 	}
 
@@ -148,29 +101,14 @@ func (m *MCPToolManager) Close() error {
 	return nil
 }
 
-// shouldIncludeTool determines if a tool should be included based on allowedTools/excludedTools
-func (m *MCPToolManager) shouldIncludeTool(toolName string, serverConfig config.MCPServerConfig) bool {
-	// If allowedTools is specified, only include tools in the list
-	if len(serverConfig.AllowedTools) > 0 {
-		for _, allowedTool := range serverConfig.AllowedTools {
-			if allowedTool == toolName {
-				return true
-			}
-		}
-		return false
-	}
-
-	// If excludedTools is specified, exclude tools in the list
-	if len(serverConfig.ExcludedTools) > 0 {
-		for _, excludedTool := range serverConfig.ExcludedTools {
-			if excludedTool == toolName {
-				return false
-			}
+// isToolExcluded checks if a tool is in the excluded list
+func (m *MCPToolManager) isToolExcluded(toolName string, excludedTools []string) bool {
+	for _, excludedTool := range excludedTools {
+		if excludedTool == toolName {
+			return true
 		}
 	}
-
-	// Include by default
-	return true
+	return false
 }
 
 func (m *MCPToolManager) createMCPClient(ctx context.Context, serverName string, serverConfig config.MCPServerConfig) (client.MCPClient, error) {
@@ -205,4 +143,30 @@ func (m *MCPToolManager) initializeClient(ctx context.Context, client client.MCP
 
 	_, err := client.Initialize(ctx, initRequest)
 	return err
+}
+
+// PrefixedTool wraps an eino tool to add a server prefix to its name
+type PrefixedTool struct {
+	tool.InvokableTool
+	prefix string
+}
+
+// Info returns the tool information with prefixed name
+func (p *PrefixedTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
+	info, err := p.InvokableTool.Info(ctx)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Add server prefix to tool name only if it doesn't already have one
+	if !hasPrefix(info.Name, p.prefix) {
+		info.Name = fmt.Sprintf("%s__%s", p.prefix, info.Name)
+	}
+	return info, nil
+}
+
+// hasPrefix checks if the tool name already has the server prefix
+func hasPrefix(toolName, prefix string) bool {
+	expectedPrefix := prefix + "__"
+	return len(toolName) > len(expectedPrefix) && toolName[:len(expectedPrefix)] == expectedPrefix
 }
